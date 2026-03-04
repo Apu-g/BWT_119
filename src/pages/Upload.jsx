@@ -68,13 +68,13 @@ export default function Upload() {
 
                 {/* Header */}
                 <div className="mb-8">
-                    <div className="inline-block px-3 py-1 bg-neuravex-surface border-2 border-neuravex-border text-neuravex-accent font-mono text-xs font-bold uppercase tracking-widest mb-4 shadow-neo-sm transform -rotate-2">
+                    <div className="inline-block px-3 py-1 bg-neuravex-surface border-2 border-neuravex-border text-neuravex-accent font-mono text-fluid-xs font-bold uppercase tracking-widest mb-4 shadow-neo-sm transform -rotate-2">
                         System Upload
                     </div>
-                    <h1 className="text-4xl sm:text-5xl font-black uppercase text-neuravex-text tracking-tighter mb-2" style={{ textShadow: '3px 3px 0px #2d9f8f' }}>
+                    <h1 className="text-fluid-5xl font-black uppercase text-neuravex-text tracking-tighter mb-2 leading-none" style={{ textShadow: '3px 3px 0px #e5e7eb' }}>
                         Add Event
                     </h1>
-                    <p className="text-neuravex-text font-mono text-sm border-l-4 border-neuravex-accent pl-3 mt-4 bg-neuravex-surface p-2 shadow-neo-sm">
+                    <p className="text-neuravex-text font-mono text-fluid-sm border-l-4 border-neuravex-accent pl-3 mt-4 bg-neuravex-surface p-2 shadow-neo-sm">
                         Paste text, drop a PDF, or upload an image.
                     </p>
                 </div>
@@ -152,7 +152,7 @@ export default function Upload() {
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M12 3v13.5m0-13.5l-4.5 4.5m4.5-4.5l4.5 4.5" />
                                         </svg>
                                     </div>
-                                    <p className="text-sm font-bold text-neuravex-text font-mono uppercase">
+                                    <p className="text-fluid-sm font-bold text-neuravex-text font-mono uppercase">
                                         Drop <span className="text-neuravex-pink">PDF</span> or <span className="text-neuravex-pink">Image</span>
                                     </p>
                                 </div>
@@ -164,7 +164,7 @@ export default function Upload() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-4 mt-4 bg-neuravex-accent border-4 border-neuravex-border font-black text-neuravex-bg uppercase tracking-widest text-lg shadow-neo transition-all hover:-translate-y-1 active:translate-y-1 active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-neo"
+                        className="w-full py-4 mt-4 bg-neuravex-accent border-4 border-neuravex-border font-black text-neuravex-bg uppercase tracking-widest text-fluid-lg shadow-neo transition-all hover:-translate-y-1 active:translate-y-1 active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-neo"
                     >
                         {loading ? (
                             <span className="flex items-center justify-center gap-2 font-mono">

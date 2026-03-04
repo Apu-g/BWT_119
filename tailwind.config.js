@@ -12,22 +12,22 @@ export default {
             },
             colors: {
                 neuravex: {
-                    bg: '#0d2b2b',        // Deep dark teal background
-                    surface: '#143838',   // Slightly lighter teal for cards
-                    card: '#1a4a4a',      // Lighter teal for nested elements
-                    border: '#2d9f8f',    // Teal borders
-                    accent: '#3bbfa7',    // Teal-green accent (Primary)
-                    'accent-light': '#5ce0c8', // Light teal accent (Secondary)
-                    pink: '#e8a838',      // Warm amber for critical/active states
-                    text: '#ffffff',
-                    muted: '#8fbfb5',
+                    bg: '#fffbf5',        // Soft cream/beige background
+                    surface: '#faebd7',   // Deeper peach tone for cards/surfaces
+                    card: '#ffe4c4',      // Soft bisque tone for nested elements
+                    border: '#000000',    // Keep black borders for the neo-brutalist style
+                    accent: '#000000',    // Black accent (Primary)
+                    'accent-light': '#374151', // Dark gray accent (Secondary)
+                    pink: '#ff4757',      // Keep red for critical/error states
+                    text: '#000000',      // Black text
+                    muted: '#6b7280',     // Muted gray
                 },
             },
             boxShadow: {
-                // Hard neo-brutalist shadows with teal tones
-                'neo': '4px 4px 0 var(--tw-shadow-color, #2d9f8f)',
-                'neo-sm': '2px 2px 0 var(--tw-shadow-color, #2d9f8f)',
-                'neo-lg': '8px 8px 0 var(--tw-shadow-color, #2d9f8f)',
+                // Hard neo-brutalist shadows with black tones
+                'neo': '4px 4px 0 var(--tw-shadow-color, #000000)',
+                'neo-sm': '2px 2px 0 var(--tw-shadow-color, #000000)',
+                'neo-lg': '8px 8px 0 var(--tw-shadow-color, #000000)',
             },
             animation: {
                 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
@@ -50,6 +50,18 @@ export default {
                 },
             },
         },
+        fontSize: {
+            'fluid-xs': 'clamp(0.6rem, 1vw + 0.5rem, 0.75rem)',
+            'fluid-sm': 'clamp(0.75rem, 1.5vw + 0.5rem, 0.875rem)',
+            'fluid-base': 'clamp(0.875rem, 2vw + 0.5rem, 1rem)',
+            'fluid-lg': 'clamp(1rem, 2.5vw + 0.5rem, 1.125rem)',
+            'fluid-xl': 'clamp(1.125rem, 3vw + 0.5rem, 1.25rem)',
+            'fluid-2xl': 'clamp(1.25rem, 4vw + 0.5rem, 1.5rem)',
+            'fluid-3xl': 'clamp(1.5rem, 5vw + 0.5rem, 1.875rem)',
+            'fluid-4xl': 'clamp(1.875rem, 6vw + 0.5rem, 2.25rem)',
+            'fluid-5xl': 'clamp(2.25rem, 8vw + 0.5rem, 3rem)',
+            'fluid-6xl': 'clamp(2.5rem, 10vw + 0.5rem, 3.75rem)',
+        }
     },
     plugins: [],
 }

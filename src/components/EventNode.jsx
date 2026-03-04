@@ -26,8 +26,8 @@ export default function EventNode({ data }) {
                 className="absolute -top-3 -right-3 w-8 h-8 flex items-center justify-center text-xs font-black font-mono border-2"
                 style={{
                     background: color.border,
-                    color: '#0d2b2b',
-                    borderColor: '#0d2b2b'
+                    color: '#ffffff',
+                    borderColor: '#000000'
                 }}
             >
                 {score}
@@ -39,7 +39,7 @@ export default function EventNode({ data }) {
             </h3>
 
             {/* Date */}
-            <p className="text-[11px] mt-1 font-mono font-bold" style={{ color: '#ffffff' }}>
+            <p className="text-[11px] mt-1 font-mono font-bold" style={{ color: '#000000' }}>
                 {dayjs(event.event_datetime).format('MMM D, h:mm A')}
             </p>
 

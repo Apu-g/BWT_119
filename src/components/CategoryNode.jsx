@@ -17,7 +17,7 @@ export default function CategoryNode({ data }) {
                 className="!bg-transparent !border-0 !w-0 !h-0"
             />
 
-            <h3 className="text-xl font-black tracking-widest uppercase text-neuravex-text" style={{ textShadow: `2px 2px 0px ${color.border}` }}>
+            <h3 className="text-xl font-black tracking-widest uppercase text-neuravex-text" style={{ textShadow: `2px 2px 0px #ffffff, -1px -1px 0 #ffffff, 1px -1px 0 #ffffff, -1px 1px 0 #ffffff, 1px 1px 0 #ffffff` }}>
                 {label}
             </h3>
 

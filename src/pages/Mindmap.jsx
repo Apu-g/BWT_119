@@ -73,9 +73,9 @@ export default function Mindmap() {
                     position: { x: 0, y: 0 },
                     data: { label: '🧠 You' },
                     style: {
-                        background: 'linear-gradient(135deg, #2d9f8f, #3bbfa7)',
-                        color: '#fff',
-                        border: '2px solid #3bbfa7',
+                        background: 'linear-gradient(135deg, #000000, #374151)',
+                        color: '#ffffff',
+                        border: '2px solid #000000',
                         borderRadius: '50%',
                         width: 80,
                         height: 80,
@@ -84,7 +84,7 @@ export default function Mindmap() {
                         justifyContent: 'center',
                         fontSize: '16px',
                         fontWeight: 700,
-                        boxShadow: '0 0 30px #2d9f8f40',
+                        boxShadow: '0 0 30px #00000040',
                     },
                     draggable: true,
                 },
@@ -104,9 +104,9 @@ export default function Mindmap() {
             position: { x: 0, y: 0 },
             data: { label: '🧠 You' },
             style: {
-                background: 'linear-gradient(135deg, #2d9f8f, #3bbfa7)',
-                color: '#fff',
-                border: '2px solid #3bbfa7',
+                background: 'linear-gradient(135deg, #000000, #374151)',
+                color: '#ffffff',
+                border: '2px solid #000000',
                 borderRadius: '50%',
                 width: 80,
                 height: 80,
@@ -115,7 +115,7 @@ export default function Mindmap() {
                 justifyContent: 'center',
                 fontSize: '16px',
                 fontWeight: 700,
-                boxShadow: '0 0 30px #2d9f8f40',
+                boxShadow: '0 0 30px #00000040',
             },
             draggable: true,
         })
@@ -236,8 +236,8 @@ export default function Mindmap() {
         <div className="h-[calc(100vh-64px)] relative">
             {/* Event count badge */}
             <div className="absolute top-4 left-4 z-10 bg-neuravex-bg border-4 border-neuravex-border px-3 py-2 flex items-center gap-2 shadow-neo-sm transform -rotate-2">
-                <div className="w-3 h-3 bg-neuravex-accent border-2 border-neuravex-border shadow-neo-sm animate-pulse" />
-                <span className="text-xs font-mono font-bold text-neuravex-text tracking-widest uppercase">
+                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-neuravex-accent border-2 border-neuravex-border shadow-neo-sm animate-pulse" />
+                <span className="text-[10px] sm:text-xs font-mono font-bold text-neuravex-text tracking-widest uppercase">
                     {events.length} events
                 </span>
             </div>
@@ -251,8 +251,8 @@ export default function Mindmap() {
                     { label: 'Low', color: '#2ecc71' },     // Green
                 ].map((item) => (
                     <div key={item.label} className="flex items-center gap-2">
-                        <div className="w-4 h-4 border-2 border-neuravex-border shadow-neo-sm" style={{ background: item.color }} />
-                        <span className="text-xs font-mono font-bold uppercase text-neuravex-text tracking-wider">{item.label}</span>
+                        <div className="w-3 h-3 sm:w-4 sm:h-4 border-2 border-neuravex-border shadow-neo-sm" style={{ background: item.color }} />
+                        <span className="text-[10px] sm:text-xs font-mono font-bold uppercase text-neuravex-text tracking-wider">{item.label}</span>
                     </div>
                 ))}
             </div>
@@ -270,9 +270,9 @@ export default function Mindmap() {
                 proOptions={{ hideAttribution: true }}
                 className="bg-transparent"
             >
-                <Background color="#2d9f8f" gap={32} size={2} variant="dots" />
+                <Background color="#000000" gap={32} size={2} variant="dots" />
                 <Controls className="react-flow-controls-neo" style={{
-                    backgroundColor: '#0d2b2b', border: '2px solid #2d9f8f', borderRadius: '0', boxShadow: '4px 4px 0 #2d9f8f'
+                    backgroundColor: '#ffffff', border: '2px solid #000000', borderRadius: '0', boxShadow: '4px 4px 0 #000000'
                 }} />
                 <MiniMap
                     nodeStrokeColor={(n) => {
@@ -286,7 +286,7 @@ export default function Mindmap() {
                         return '#0d2b2b'
                     }}
                     nodeBorderRadius={0}
-                    style={{ backgroundColor: '#143838', border: '4px solid #2d9f8f', borderRadius: '0', boxShadow: '4px 4px 0 #2d9f8f' }}
+                    style={{ backgroundColor: '#ffffff', border: '4px solid #000000', borderRadius: '0', boxShadow: '4px 4px 0 #000000' }}
                 />
             </ReactFlow>
         </div>

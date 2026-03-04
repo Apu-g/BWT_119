@@ -75,15 +75,15 @@ export default function OpeningAnimation({ onComplete }) {
             {/* The animated blocks layer */}
             <div className="absolute inset-0 z-10 flex w-full h-full pointer-events-none">
                 {blocks.map((_, i) => {
-                    // Light green shades for the opening animation
-                    const greenShades = ['#90EE90', '#7CDB7C', '#68C868', '#55B555', '#90EE90', '#7CDB7C', '#68C868', '#55B555']
+                    // Pure black for the opening animation
+                    const themeShades = ['#000000']
                     return (
                         <div
                             key={i}
                             ref={(el) => (blocksRef.current[i] = el)}
                             className="flex-1 h-full"
                             style={{
-                                backgroundColor: greenShades[i % greenShades.length],
+                                backgroundColor: themeShades[i % themeShades.length],
                                 marginRight: '-1px',
                                 clipPath: 'polygon(0 0, 100% 0, 100% 100%, 0 100%)'
                             }}

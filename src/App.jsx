@@ -20,11 +20,11 @@ export default function App() {
             <nav className="sticky top-4 z-40 mx-4 sm:mx-8 mb-8 bg-neuravex-bg border-4 border-neuravex-border shadow-neo transition-all">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
                     {/* Logo */}
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 flex items-center justify-center bg-neuravex-accent-light text-neuravex-bg text-sm font-bold border-2 border-neuravex-border shadow-neo-sm transform -rotate-3 hover:rotate-0 transition-transform cursor-default">
+                    <div className="flex items-center gap-1.5 sm:gap-2.5">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center bg-neuravex-accent-light text-neuravex-bg text-xs sm:text-sm font-bold border-2 border-neuravex-border shadow-neo-sm transform -rotate-3 hover:rotate-0 transition-transform cursor-default">
                             N
                         </div>
-                        <span className="text-xl font-black tracking-tighter uppercase text-neuravex-text hidden sm:inline ml-1">
+                        <span className="text-lg sm:text-xl font-black tracking-tighter uppercase text-neuravex-text ml-1">
                             Neuravex
                         </span>
                     </div>
@@ -43,15 +43,15 @@ export default function App() {
                                     }`
                                 }
                             >
-                                <span className="text-base">{link.icon}</span>
-                                <span className="hidden sm:inline">{link.label}</span>
+                                <span className="text-sm sm:text-base">{link.icon}</span>
+                                <span className="text-[10px] sm:text-sm">{link.label}</span>
                             </NavLink>
                         ))}
                     </div>
 
                     {/* Decorative status */}
                     <div className="flex items-center gap-2 px-3 py-1 bg-neuravex-surface border-2 border-neuravex-border shadow-neo-sm">
-                        <div className="w-2.5 h-2.5 bg-emerald-400 border border-neuravex-border animate-pulse" />
+                        <div className="w-2.5 h-2.5 bg-black border border-neuravex-border animate-pulse" />
                         <span className="text-xs font-bold uppercase tracking-wider text-neuravex-text hidden sm:inline">Connected</span>
                     </div>
                 </div>

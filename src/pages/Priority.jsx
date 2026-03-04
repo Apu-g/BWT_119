@@ -63,13 +63,13 @@ export default function Priority() {
         <div className="min-h-[calc(100vh-64px)] p-6 max-w-4xl mx-auto animate-fade-in">
             {/* Header */}
             <div className="text-center mb-12 relative">
-                <div className="inline-block px-4 py-1 bg-neuravex-surface border-2 border-neuravex-border text-neuravex-accent font-mono text-xs font-bold uppercase tracking-widest mb-4 shadow-neo-sm transform -rotate-2">
+                <div className="inline-block px-4 py-1 bg-neuravex-surface border-2 border-neuravex-border text-neuravex-accent font-mono text-fluid-xs font-bold uppercase tracking-widest mb-4 shadow-neo-sm transform -rotate-2">
                     Analysis Module
                 </div>
-                <h1 className="text-5xl sm:text-6xl font-black uppercase text-neuravex-text tracking-tighter" style={{ textShadow: '4px 4px 0px #e8a838' }}>
+                <h1 className="text-fluid-5xl font-black uppercase text-neuravex-text tracking-tighter leading-none" style={{ textShadow: '4px 4px 0px #e5e7eb' }}>
                     Priority Hub
                 </h1>
-                <p className="text-neuravex-text font-mono text-sm max-w-lg mx-auto mt-6 bg-neuravex-surface p-4 border-2 border-neuravex-border shadow-neo-sm">
+                <p className="text-neuravex-text font-mono text-fluid-sm max-w-lg mx-auto mt-6 bg-neuravex-surface p-4 border-2 border-neuravex-border shadow-neo-sm">
                     AI-generated schedule with smart recommendations based on urgency and importance metrics.
                 </p>
             </div>
@@ -83,9 +83,9 @@ export default function Priority() {
                     { label: 'Schedule', value: schedule.length, icon: '📋', shadow: '#2ecc71' },
                 ].map((stat) => (
                     <div key={stat.label} className="bg-neuravex-bg border-4 border-neuravex-border p-4 text-center shadow-neo-sm hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all cursor-default" style={{ '--tw-shadow-color': stat.shadow }}>
-                        <span className="text-xl">{stat.icon}</span>
-                        <p className="text-2xl font-black text-neuravex-text mt-1">{stat.value}</p>
-                        <p className="text-[10px] text-neuravex-text font-black uppercase tracking-widest mt-1 opacity-70">{stat.label}</p>
+                        <span className="text-fluid-xl">{stat.icon}</span>
+                        <p className="text-fluid-2xl font-black text-neuravex-text mt-1">{stat.value}</p>
+                        <p className="text-[10px] sm:text-fluid-xs text-neuravex-text font-black uppercase tracking-widest mt-1 opacity-70">{stat.label}</p>
                     </div>
                 ))}
             </div>
@@ -134,7 +134,7 @@ export default function Priority() {
             ) : (
                 /* ===== RANKED / RECOMMENDED ACTIONS VIEW ===== */
                 <div className="space-y-6">
-                    <h2 className="text-xl font-black text-neuravex-text uppercase tracking-tighter text-center mb-8 bg-neuravex-accent-light inline-block px-4 py-1 border-2 border-neuravex-border shadow-neo-sm mx-auto flex w-fit">
+                    <h2 className="text-fluid-xl font-black text-neuravex-text uppercase tracking-tighter text-center mb-8 bg-neuravex-accent-light inline-block px-4 py-1 border-2 border-neuravex-border shadow-neo-sm mx-auto flex w-fit">
                         Recommended Actions
                     </h2>
                     {enrichedEvents.map((event, i) => {
@@ -145,22 +145,33 @@ export default function Priority() {
                                 className="relative animate-slide-up"
                                 style={{ animationDelay: `${i * 60}ms`, animationFillMode: 'backwards' }}
                             >
-                                <div className="bg-neuravex-bg border-4 border-neuravex-border p-6 shadow-neo transition-all hover:-translate-y-1" style={{ '--tw-shadow-color': color.border }}>
-                                    <div className="flex items-start gap-6">
+                                <div className="bg-neuravex-bg border-4 border-neuravex-border p-4 sm:p-6 shadow-neo transition-all hover:-translate-y-1" style={{ '--tw-shadow-color': color.border }}>
+                                    <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
                                         {/* Rank + icon */}
-                                        <div className="flex-shrink-0 flex flex-col items-center gap-2">
-                                            <div className="w-10 h-10 border-2 border-neuravex-border bg-neuravex-surface flex items-center justify-center text-sm font-black text-neuravex-text shadow-neo-sm">
-                                                #{i + 1}
+                                        <div className="flex-shrink-0 flex sm:flex-col items-center gap-2 w-full sm:w-auto border-b-2 sm:border-b-0 border-neuravex-border pb-3 sm:pb-0 justify-between sm:justify-start">
+                                            <div className="flex items-center gap-3 sm:flex-col sm:gap-2">
+                                                <div className="w-8 h-8 sm:w-10 sm:h-10 border-2 border-neuravex-border bg-neuravex-surface flex items-center justify-center text-xs sm:text-sm font-black text-neuravex-text shadow-neo-sm">
+                                                    #{i + 1}
+                                                </div>
+                                                <div className="text-xl sm:text-2xl filter drop-shadow-[2px_2px_0_rgba(0,0,0,0.5)]">
+                                                    {event.actionIcon}
+                                                </div>
                                             </div>
-                                            <div className="text-2xl filter drop-shadow-[2px_2px_0_rgba(0,0,0,0.5)]">
-                                                {event.actionIcon}
+                                            <div className="sm:hidden flex flex-col items-end">
+                                                <div
+                                                    className="w-12 h-12 border-2 border-neuravex-border flex flex-col items-center justify-center shadow-neo-sm font-black"
+                                                    style={{ background: color.bg, color: color.border }}
+                                                >
+                                                    <span className="text-lg">{event.priority_score}</span>
+                                                    <span className="text-[7px] uppercase tracking-widest mt-[-2px]">PTS</span>
+                                                </div>
                                             </div>
                                         </div>
 
                                         {/* Main content */}
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between gap-2 mb-2">
-                                                <h3 className="text-xl font-black uppercase text-neuravex-text tracking-tight truncate">
+                                        <div className="flex-1 min-w-0 w-full">
+                                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-2 mb-2">
+                                                <h3 className="text-lg sm:text-xl font-black uppercase text-neuravex-text tracking-tight break-words max-w-full">
                                                     {event.title}
                                                 </h3>
                                                 <div className="flex items-center gap-2">
@@ -192,8 +203,8 @@ export default function Priority() {
                                             </div>
                                         </div>
 
-                                        {/* Score */}
-                                        <div className="flex-shrink-0 flex flex-col items-center gap-1">
+                                        {/* Score (Desktop Only) */}
+                                        <div className="hidden sm:flex flex-shrink-0 flex-col items-center gap-1">
                                             <div
                                                 className="w-16 h-16 border-4 border-neuravex-border flex flex-col items-center justify-center shadow-neo-sm font-black"
                                                 style={{ background: color.bg, color: color.border }}
