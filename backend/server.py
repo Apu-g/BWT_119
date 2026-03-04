@@ -17,10 +17,15 @@ from datetime import datetime
 # CONFIGURATION
 # ==============================
 
-GEMINI_API_KEY = "AIzaSyD_J42hzmwy9fmNP2VVv9OttCpbrVQS8Ag"
+from dotenv import load_dotenv
+load_dotenv()  # Load variables from .env file
 
-SUPABASE_URL = "https://tvzenknzcxuegkzujihu.supabase.co"
-SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2emVua256Y3h1ZWdrenVqaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1NTYyNDIsImV4cCI6MjA4ODEzMjI0Mn0.rbceObIw6hMdWyCtBEu487cPAo3jxgtyw_3X44vsySE"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+
+if not GEMINI_API_KEY or not SUPABASE_URL or not SUPABASE_ANON_KEY:
+    print("⚠️ WARNING: Missing necessary environment variables (.env)")
 
 # Configure Gemini
 genai.configure(api_key=GEMINI_API_KEY)

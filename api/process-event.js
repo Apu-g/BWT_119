@@ -6,9 +6,13 @@ import fs from 'fs';
 // CONFIGURATION
 // ==============================
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyD_J42hzmwy9fmNP2VVv9OttCpbrVQS8Ag';
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://tvzenknzcxuegkzujihu.supabase.co';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2emVua256Y3h1ZWdrenVqaWh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1NTYyNDIsImV4cCI6MjA4ODEzMjI0Mn0.rbceObIw6hMdWyCtBEu487cPAo3jxgtyw_3X44vsySE';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+
+if (!GEMINI_API_KEY || !SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.warn('Missing environment variables for Gemini or Supabase.');
+}
 
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
