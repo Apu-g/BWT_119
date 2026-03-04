@@ -16,8 +16,9 @@ import {
     sortByPriority,
 } from '../lib/priorityEngine'
 import EventNode from '../components/EventNode'
+import CategoryNode from '../components/CategoryNode'
 
-const nodeTypes = { eventNode: EventNode }
+const nodeTypes = { eventNode: EventNode, categoryNode: CategoryNode }
 
 export default function Mindmap() {
     const [events, setEvents] = useState([])
@@ -77,11 +78,10 @@ export default function Mindmap() {
         }
 
         const sorted = sortByPriority(events)
-        const count = sorted.length
         const newNodes = []
         const newEdges = []
 
-        // Center node
+        // 1. Center node
         newNodes.push({
             id: 'center',
             type: 'default',
@@ -104,29 +104,86 @@ export default function Mindmap() {
             draggable: true,
         })
 
-        // Event nodes arranged in a circle
-        sorted.forEach((event, i) => {
-            const score = getPriorityScore(event)
-            const distance = getNodeDistance(score)
-            const angle = (2 * Math.PI * i) / count - Math.PI / 2
-            const x = Math.cos(angle) * (distance + 60)
-            const y = Math.sin(angle) * (distance + 60)
-            const color = getPriorityColor(score)
+        // 2. Group events by category
+        const categories = {}
+        sorted.forEach((event) => {
+            const cat = event.category || 'other'
+            if (!categories[cat]) categories[cat] = []
+            categories[cat].push(event)
+        })
 
+        const categoryKeys = Object.keys(categories)
+        const catCount = categoryKeys.length
+
+        // Category circle radius
+        const catRadius = 300
+
+        // 3. Create Category nodes and their respective Event nodes
+        categoryKeys.forEach((cat, catIndex) => {
+            // Determine a base color for the category using the highest priority event in that category
+            const eventsInCat = categories[cat]
+            const highestEvent = eventsInCat[0] // Since they are already sorted by priority
+            const color = getPriorityColor(getPriorityScore(highestEvent))
+
+            const catId = `cat-${cat}`
+            const catAngle = (2 * Math.PI * catIndex) / catCount - Math.PI / 2
+
+            // Plot category position
+            const cx = Math.cos(catAngle) * catRadius
+            const cy = Math.sin(catAngle) * catRadius
+
+            // Add Category Node
             newNodes.push({
-                id: event.id,
-                type: 'eventNode',
-                position: { x: x - 90, y: y - 30 },
-                data: { event },
+                id: catId,
+                type: 'categoryNode',
+                position: { x: cx - 70, y: cy - 20 },
+                data: { label: cat, color },
                 draggable: true,
             })
 
+            // Add Edge from Center to Category
             newEdges.push({
-                id: `edge-${event.id}`,
+                id: `edge-center-${cat}`,
                 source: 'center',
-                target: event.id,
-                animated: score > 15,
-                style: { stroke: color.border, strokeWidth: 2, opacity: 0.5 },
+                target: catId,
+                type: 'default', // Bezier curve
+                style: { stroke: color.border, strokeWidth: 3, opacity: 0.6 },
+                animated: true,
+            })
+
+            // Radially fan out the events belonging to this category from the category node
+            const eventCount = eventsInCat.length
+            const spreadAngle = (Math.PI / 3) // 60 degrees spread per category cluster
+            const startAngle = catAngle - spreadAngle / 2
+
+            eventsInCat.forEach((event, eIndex) => {
+                const eAngle = eventCount === 1
+                    ? catAngle
+                    : startAngle + (spreadAngle * (eIndex / (eventCount - 1)))
+
+                // Add distance outward from the category node
+                const score = getPriorityScore(event)
+                const distanceOut = getNodeDistance(score) + 100 // Extra padding from cat node
+
+                const ex = cx + Math.cos(eAngle) * distanceOut
+                const ey = cy + Math.sin(eAngle) * distanceOut
+
+                newNodes.push({
+                    id: event.id,
+                    type: 'eventNode',
+                    position: { x: ex - 90, y: ey - 30 },
+                    data: { event },
+                    draggable: true,
+                })
+
+                newEdges.push({
+                    id: `edge-${cat}-${event.id}`,
+                    source: catId,
+                    target: event.id,
+                    type: 'default', // Bezier curve
+                    animated: score > 15,
+                    style: { stroke: color.border, strokeWidth: 2, opacity: 0.4 },
+                })
             })
         })
 

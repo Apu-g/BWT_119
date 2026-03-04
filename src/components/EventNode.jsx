@@ -18,7 +18,7 @@ export default function EventNode({ data }) {
         >
             <Handle
                 type="target"
-                position={Position.Top}
+                position={Position.Left}
                 className="!bg-transparent !border-0 !w-0 !h-0"
             />
 
@@ -56,7 +56,7 @@ export default function EventNode({ data }) {
 
             <Handle
                 type="source"
-                position={Position.Bottom}
+                position={Position.Right}
                 className="!bg-transparent !border-0 !w-0 !h-0"
             />
         </div>
