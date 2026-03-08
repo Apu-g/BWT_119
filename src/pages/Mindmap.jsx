@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react'
+import { useState, useEffect, useCallback, useRef, useLayoutEffect, useMemo } from 'react'
 import {
     ReactFlow,
     Background,
@@ -8,6 +8,9 @@ import {
     useEdgesState,
     ReactFlowProvider,
 } from '@xyflow/react'
+
+// Real-time refresh interval (ms)
+const TICK_INTERVAL = 60_000
 import '@xyflow/react/dist/style.css'
 import { supabase } from '../lib/supabase'
 import {
@@ -182,6 +185,13 @@ export default function Mindmap() {
     const [error, setError] = useState(null)
     const [canvasHeight, setCanvasHeight] = useState(0)
     const [resetKey, setResetKey] = useState(0)
+    const [tick, setTick] = useState(0)
+
+    // Real-time tick: re-render every 60s so node colors update live
+    useEffect(() => {
+        const id = setInterval(() => setTick((t) => t + 1), TICK_INTERVAL)
+        return () => clearInterval(id)
+    }, [])
 
     useLayoutEffect(() => {
         function measure() {
@@ -280,7 +290,7 @@ export default function Mindmap() {
                     </div>
                 </div>
             ) : (
-                <ReactFlowProvider key={resetKey}>
+                <ReactFlowProvider key={`${resetKey}-${tick}`}>
                     <MindmapCanvas events={events} canvasHeight={canvasHeight} onDeleteEvent={handleDeleteEvent} />
                 </ReactFlowProvider>
             )}

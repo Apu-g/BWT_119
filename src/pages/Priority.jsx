@@ -7,15 +7,20 @@ import {
     generateSchedule,
     enrichAndSort,
     generateAction,
+    getNotificationAlert,
 } from '../lib/priorityEngine'
 import PriorityCard from '../components/PriorityCard'
 import dayjs from 'dayjs'
+
+// Real-time refresh interval (ms)
+const TICK_INTERVAL = 60_000
 
 export default function Priority() {
     const [events, setEvents] = useState([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
     const [view, setView] = useState('schedule')
+    const [tick, setTick] = useState(0)
 
     const fetchEvents = useCallback(async () => {
         try {
@@ -31,6 +36,12 @@ export default function Priority() {
 
     useEffect(() => { fetchEvents() }, [fetchEvents])
 
+    // Real-time tick: re-render every 60s so priorities/colors/alerts update live
+    useEffect(() => {
+        const id = setInterval(() => setTick((t) => t + 1), TICK_INTERVAL)
+        return () => clearInterval(id)
+    }, [])
+
     const handleDeleteEvent = useCallback(async (eventId) => {
         setEvents((prev) => prev.filter((e) => e.id !== eventId))
         const { error: delError } = await supabase.from('events').delete().eq('id', eventId)
@@ -40,8 +51,14 @@ export default function Priority() {
         }
     }, [fetchEvents])
 
+    // These re-compute every tick because dayjs() inside returns fresh values
     const enrichedEvents = enrichAndSort(events)
     const schedule = generateSchedule(events)
+
+    // Collect active notification alerts for the banner
+    const activeAlerts = enrichedEvents
+        .filter((e) => e.alert && e.alert.type !== 'past')
+        .map((e) => e.alert)
 
     if (loading) {
         return (
@@ -83,13 +100,47 @@ export default function Priority() {
                 </p>
             </div>
 
+            {/* Notification Alert Banner */}
+            {activeAlerts.length > 0 && (
+                <div className="mb-6 sm:mb-8 space-y-2 animate-slide-up">
+                    {activeAlerts.map((alert, i) => (
+                        <div
+                            key={i}
+                            className="relative rounded-xl p-3 sm:p-4 overflow-hidden"
+                            style={{
+                                background: `${alert.color}12`,
+                                border: `1px solid ${alert.color}40`,
+                                boxShadow: `0 0 24px ${alert.color}15`,
+                            }}
+                        >
+                            {/* Pulsing left bar */}
+                            <div
+                                className="absolute top-0 left-0 w-1.5 h-full animate-pulse"
+                                style={{ background: alert.color, boxShadow: `0 0 12px ${alert.color}80` }}
+                            />
+                            <div className="flex items-start gap-2.5 pl-2.5">
+                                <span className="text-xl sm:text-2xl flex-shrink-0">{alert.icon}</span>
+                                <div className="min-w-0">
+                                    <p className="text-xs sm:text-sm font-bold tracking-tight" style={{ color: alert.color }}>
+                                        {alert.title}
+                                    </p>
+                                    <p className="text-[10px] sm:text-xs text-nv-text-dim font-mono mt-0.5 break-words">
+                                        {alert.message}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
             {/* Stats bar */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-6 sm:mb-10">
                 {[
                     { label: 'Total Events', value: events.length, icon: '📅', glow: '#4da3ff' },
                     { label: 'Critical', value: enrichedEvents.filter((e) => e.priority_score > 15).length, icon: '🔴', glow: '#ff4d4d' },
                     { label: 'Today', value: events.filter((e) => dayjs(e.event_datetime).isSame(dayjs(), 'day')).length, icon: '📌', glow: '#ff9f43' },
-                    { label: 'Schedule', value: schedule.length, icon: '📋', glow: '#3ddc97' },
+                    { label: 'Alerts', value: activeAlerts.length, icon: '🔔', glow: activeAlerts.length > 0 ? '#ff4d4d' : '#3ddc97' },
                 ].map((stat) => (
                     <div key={stat.label}
                         className="glass rounded-xl p-3 sm:p-4 text-center transition-all duration-200 hover:-translate-y-0.5 cursor-default"
@@ -188,6 +239,13 @@ export default function Priority() {
                                                         style={{ background: `${color.border}15`, color: color.border, border: `1px solid ${color.border}25` }}>
                                                         {event.category}
                                                     </span>
+                                                    {/* Alert badge */}
+                                                    {event.alert && event.alert.type !== 'past' && (
+                                                        <span className="px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] font-bold uppercase tracking-wider animate-pulse"
+                                                            style={{ background: `${event.alert.color}20`, color: event.alert.color, border: `1px solid ${event.alert.color}40` }}>
+                                                            {event.alert.icon} {event.alert.title}
+                                                        </span>
+                                                    )}
                                                     <div className="flex items-center gap-1.5 ml-auto">
                                                         {/* Delete button */}
                                                         <button

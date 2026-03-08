@@ -27,18 +27,21 @@ export function getCategoryWeight(category) {
 
 /**
  * Calculate urgency score based on hours remaining.
+ * Smoother 8-tier curve for finer priority transitions.
  */
 export function getUrgencyScore(eventDatetime) {
     const now = dayjs()
     const eventTime = dayjs(eventDatetime)
     const hoursRemaining = eventTime.diff(now, 'hour', true)
 
-    if (hoursRemaining <= 0) return 0
-    if (hoursRemaining < 6) return 10
-    if (hoursRemaining < 12) return 8
-    if (hoursRemaining < 24) return 6
-    if (hoursRemaining < 48) return 4
-    return 2
+    if (hoursRemaining <= 0) return 0   // Past
+    if (hoursRemaining < 1) return 10   // Critical — imminent
+    if (hoursRemaining < 3) return 9    // Critical — very close
+    if (hoursRemaining < 6) return 8    // High — approaching
+    if (hoursRemaining < 12) return 6   // High
+    if (hoursRemaining < 24) return 4   // Medium
+    if (hoursRemaining < 48) return 3   // Medium-low
+    return 2                            // Low — plenty of time
 }
 
 /**
@@ -86,6 +89,88 @@ function isStudyCategory(category) {
 }
 
 // ============================================================
+// NOTIFICATION ALERT ENGINE
+// ============================================================
+
+/**
+ * Get a notification alert for an event based on how close it is.
+ * Returns null if no alert is needed, or an alert object.
+ */
+export function getNotificationAlert(event) {
+    const now = dayjs()
+    const eventTime = dayjs(event.event_datetime)
+    const hours = eventTime.diff(now, 'hour', true)
+    const minutes = Math.max(0, Math.round(eventTime.diff(now, 'minute', true)))
+
+    // No alerts for past events or events > 3 hours away
+    if (hours <= 0) {
+        return {
+            type: 'past',
+            severity: 'info',
+            title: 'Event has started or passed',
+            message: `${event.title} was scheduled at ${eventTime.format('h:mm A')}`,
+            icon: '⏰',
+            color: '#94a3b8',
+        }
+    }
+
+    if (hours <= 1) {
+        return {
+            type: 'imminent',
+            severity: 'critical',
+            title: 'Starting very soon!',
+            message: `${event.title} in ${minutes} min — leave now / final preparations!`,
+            icon: '🚨',
+            color: '#ff4757',
+        }
+    }
+
+    if (hours <= 2) {
+        return {
+            type: 'arriving_soon',
+            severity: 'warning',
+            title: 'Arriving soon — prepare now!',
+            message: `${event.title} in ~${minutes} min — start getting ready`,
+            icon: '🔔',
+            color: '#ffa502',
+        }
+    }
+
+    if (hours <= 3) {
+        return {
+            type: 'heads_up',
+            severity: 'notice',
+            title: 'Less than 3 hours left',
+            message: `${event.title} at ${eventTime.format('h:mm A')} — wrap up current work`,
+            icon: '📢',
+            color: '#3498db',
+        }
+    }
+
+    return null // No notification needed
+}
+
+// ============================================================
+// HELPER: human-readable time remaining
+// ============================================================
+
+function formatTimeRemaining(hours) {
+    if (hours <= 0) return 'now'
+    if (hours < 1) {
+        const mins = Math.round(hours * 60)
+        return `${mins} min`
+    }
+    if (hours < 24) {
+        const h = Math.floor(hours)
+        const m = Math.round((hours - h) * 60)
+        return m > 0 ? `${h}h ${m}m` : `${h}h`
+    }
+    const days = Math.floor(hours / 24)
+    const remainingH = Math.round(hours - days * 24)
+    return remainingH > 0 ? `${days}d ${remainingH}h` : `${days}d`
+}
+
+// ============================================================
 // ACTION CLAUSE ENGINE
 // ============================================================
 
@@ -98,6 +183,8 @@ export function generateAction(event) {
     const eventTime = dayjs(event.event_datetime)
     const hours = eventTime.diff(now, 'hour', true)
     const cat = (event.category || '').toLowerCase().trim()
+    const timeStr = formatTimeRemaining(hours)
+    const timeLabel = eventTime.format('h:mm A')
 
     let action = ''
     let recommendation = ''
@@ -112,16 +199,20 @@ export function generateAction(event) {
 
         if (hours <= 0) {
             recommendation = 'Event has passed'
+        } else if (hours < 1) {
+            recommendation = `⚠️ EXAM IN ${timeStr}! Final review only — focus on key formulas`
+        } else if (hours < 3) {
+            recommendation = `🚨 ${timeStr} left — intensive cram session NOW (${studyHours}h recommended)`
         } else if (hours < 6) {
-            recommendation = `Cram session — study immediately (${studyHours}h recommended)`
+            recommendation = `🔔 ${timeStr} until exam — study immediately (${studyHours}h recommended)`
         } else if (hours < 12) {
-            recommendation = `Study immediately (${studyHours} hours recommended)`
+            recommendation = `📢 Exam at ${timeLabel} (${timeStr} left) — deep study session needed`
         } else if (hours < 24) {
-            recommendation = `Start preparation today (${studyHours} hours)`
+            recommendation = `Start preparation today — ${timeStr} remaining (${studyHours}h blocks)`
         } else if (hours < 48) {
-            recommendation = `Plan a focused revision schedule`
+            recommendation = `Plan focused revision schedule — ${timeStr} until exam`
         } else {
-            recommendation = `Create study plan — you have ${Math.floor(hours / 24)} days`
+            recommendation = `Create study plan — you have ${timeStr} to prepare`
         }
     } else if (cat === 'hackathon') {
         action = `Work on project: ${event.title}`
@@ -130,12 +221,16 @@ export function generateAction(event) {
 
         if (hours <= 0) {
             recommendation = 'Event has passed'
+        } else if (hours < 1) {
+            recommendation = `⚠️ STARTS IN ${timeStr}! Finalize setup and team coordination`
+        } else if (hours < 3) {
+            recommendation = `🚨 ${timeStr} left — last prep window! Review tools & plan approach`
         } else if (hours < 12) {
-            recommendation = `Build core features now (${studyHours}h block)`
+            recommendation = `🔔 Build core features now — ${timeStr} remaining (${studyHours}h block)`
         } else if (hours < 24) {
-            recommendation = `Focus on MVP today`
+            recommendation = `Focus on MVP today — ${timeStr} left until kickoff`
         } else {
-            recommendation = `Plan project milestones`
+            recommendation = `Plan project milestones — ${timeStr} to prepare`
         }
     } else if (cat === 'assignment') {
         action = `Complete: ${event.title}`
@@ -144,12 +239,16 @@ export function generateAction(event) {
 
         if (hours <= 0) {
             recommendation = 'Past deadline'
+        } else if (hours < 1) {
+            recommendation = `⚠️ DUE IN ${timeStr}! Submit immediately if ready`
+        } else if (hours < 3) {
+            recommendation = `🚨 ${timeStr} to deadline — finish and submit NOW`
         } else if (hours < 6) {
-            recommendation = `Finish immediately — deadline approaching`
+            recommendation = `🔔 Deadline approaching — ${timeStr} left, focus intensely`
         } else if (hours < 24) {
-            recommendation = `Allocate ${studyHours} hours of focused work today`
+            recommendation = `Allocate ${studyHours}h focused work today — ${timeStr} remaining`
         } else {
-            recommendation = `Schedule ${studyHours}h work block`
+            recommendation = `Schedule ${studyHours}h work block — ${timeStr} until deadline`
         }
     } else if (cat === 'meeting') {
         action = `Prepare for meeting: ${event.title}`
@@ -157,12 +256,16 @@ export function generateAction(event) {
 
         if (hours <= 0) {
             recommendation = 'Meeting has passed'
+        } else if (hours < 0.5) {
+            recommendation = `⚠️ MEETING IN ${timeStr}! Join now or head to venue`
+        } else if (hours < 1) {
+            recommendation = `🚨 Starting in ${timeStr} — final agenda check, be ready to join`
         } else if (hours < 2) {
-            recommendation = 'Review agenda — meeting soon'
+            recommendation = `🔔 Meeting at ${timeLabel} (${timeStr}) — review agenda & prep notes`
         } else if (hours < 24) {
-            recommendation = 'Prepare discussion points today'
+            recommendation = `Prepare discussion points today — meeting in ${timeStr}`
         } else {
-            recommendation = 'Review agenda in advance'
+            recommendation = `Review agenda in advance — meeting in ${timeStr}`
         }
     } else if (cat === 'personal') {
         action = `Prepare for: ${event.title}`
@@ -170,33 +273,52 @@ export function generateAction(event) {
 
         if (hours <= 0) {
             recommendation = 'Event has passed'
+        } else if (hours < 1) {
+            recommendation = `⚠️ EVENT IN ${timeStr}! Get ready and leave now!`
+        } else if (hours < 2) {
+            recommendation = `🔔 Arriving soon! ${event.title} at ${timeLabel} — start getting ready`
         } else if (hours < 3) {
-            recommendation = 'Get ready — event starting soon!'
+            recommendation = `📢 ${timeStr} left — plan your travel / preparation time`
         } else if (hours < 24) {
-            recommendation = `Reminder: Attend at ${eventTime.format('h:mm A')}`
+            recommendation = `Reminder: ${event.title} at ${timeLabel} today (${timeStr} away)`
         } else {
-            recommendation = `Reminder: ${eventTime.format('MMM D')} at ${eventTime.format('h:mm A')}`
+            recommendation = `Reminder: ${eventTime.format('MMM D')} at ${timeLabel} — ${timeStr} away`
         }
     } else if (cat === 'reminder') {
         action = event.title
         icon = '🔔'
-        recommendation = hours <= 0 ? 'Past reminder' : `Reminder at ${eventTime.format('h:mm A')}`
+        if (hours <= 0) {
+            recommendation = 'Past reminder'
+        } else if (hours < 1) {
+            recommendation = `⚠️ Reminder in ${timeStr}!`
+        } else {
+            recommendation = `Reminder at ${timeLabel} — ${timeStr} from now`
+        }
     } else {
         action = event.title
         icon = '📅'
-        recommendation = hours <= 0 ? 'Event passed' : `Coming up at ${eventTime.format('h:mm A')}`
+        if (hours <= 0) {
+            recommendation = 'Event passed'
+        } else if (hours < 1) {
+            recommendation = `⚠️ Coming up in ${timeStr}! Prepare now`
+        } else if (hours < 3) {
+            recommendation = `🔔 ${event.title} at ${timeLabel} — ${timeStr} left, get ready`
+        } else {
+            recommendation = `Coming up at ${timeLabel} — ${timeStr} away`
+        }
     }
 
     return { action, recommendation, studyHours, icon }
 }
 
 /**
- * Build a full enriched event object with priority + action clauses.
+ * Build a full enriched event object with priority + action clauses + notification.
  */
 export function enrichEvent(event) {
     const score = getPriorityScore(event)
     const color = getPriorityColor(score)
     const { action, recommendation, studyHours, icon } = generateAction(event)
+    const alert = getNotificationAlert(event)
 
     return {
         ...event,
@@ -206,6 +328,7 @@ export function enrichEvent(event) {
         recommendation,
         studyHours,
         actionIcon: icon,
+        alert,
     }
 }
 
@@ -309,6 +432,7 @@ export function generateSchedule(events) {
         }
 
         const { action, recommendation, icon } = generateAction(event)
+        const eventAlert = getNotificationAlert(event)
         const eventEntry = {
             id: `event-${event.id}`,
             type: isStudyCategory(event.category) ? 'exam' : 'event',
@@ -323,6 +447,7 @@ export function generateSchedule(events) {
             action,
             recommendation,
             actionIcon: icon,
+            alert: eventAlert,
         }
         schedule.push(eventEntry)
 

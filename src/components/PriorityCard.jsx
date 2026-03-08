@@ -3,6 +3,7 @@ import { getPriorityColor } from '../lib/priorityEngine'
 export default function PriorityCard({ item, index, onDelete }) {
     const color = getPriorityColor(item.priority)
     const isBreak = item.type === 'break'
+    const alert = item.alert
 
     const handleDelete = (e) => {
         e.stopPropagation()
@@ -25,8 +26,35 @@ export default function PriorityCard({ item, index, onDelete }) {
                     opacity: isBreak ? 0.7 : 1,
                 }}
             >
-                {/* Left glow bar */}
-                <div className="absolute top-0 left-0 w-1 h-full rounded-l-xl" style={{ background: isBreak ? 'rgba(148, 163, 184, 0.3)' : color.border, boxShadow: isBreak ? 'none' : `0 0 8px ${color.border}60` }} />
+                {/* Left glow bar — pulses when there's an active alert */}
+                <div
+                    className={`absolute top-0 left-0 w-1 h-full rounded-l-xl ${alert && alert.type !== 'past' ? 'animate-pulse' : ''}`}
+                    style={{
+                        background: isBreak ? 'rgba(148, 163, 184, 0.3)' : color.border,
+                        boxShadow: isBreak ? 'none' : `0 0 8px ${color.border}60`,
+                    }}
+                />
+
+                {/* Alert banner inside card */}
+                {alert && alert.type !== 'past' && !isBreak && (
+                    <div
+                        className="mb-3 rounded-lg p-2 sm:p-2.5 flex items-center gap-2 animate-pulse ml-2"
+                        style={{
+                            background: `${alert.color}12`,
+                            border: `1px solid ${alert.color}30`,
+                        }}
+                    >
+                        <span className="text-base sm:text-lg flex-shrink-0">{alert.icon}</span>
+                        <div className="min-w-0">
+                            <p className="text-[10px] sm:text-xs font-bold tracking-tight" style={{ color: alert.color }}>
+                                {alert.title}
+                            </p>
+                            <p className="text-[9px] sm:text-[10px] text-nv-text-dim font-mono truncate">
+                                {alert.message}
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Top info row: time + delete + priority badge */}
                 <div className="flex items-center justify-between mb-2.5 sm:mb-3 pb-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
