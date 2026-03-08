@@ -35,8 +35,8 @@ export function getUrgencyScore(eventDatetime) {
     const hoursRemaining = eventTime.diff(now, 'hour', true)
 
     if (hoursRemaining <= 0) return 0   // Past
-    if (hoursRemaining < 1) return 10   // Critical — imminent
-    if (hoursRemaining < 3) return 9    // Critical — very close
+    if (hoursRemaining < 1) return 12   // Critical — imminent (ensures ALL categories turn red)
+    if (hoursRemaining < 3) return 10   // Critical/High — very close
     if (hoursRemaining < 6) return 8    // High — approaching
     if (hoursRemaining < 12) return 6   // High
     if (hoursRemaining < 24) return 4   // Medium

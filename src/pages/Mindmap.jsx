@@ -188,8 +188,24 @@ export default function Mindmap() {
     const [tick, setTick] = useState(0)
 
     // Real-time tick: re-render every 60s so node colors update live
+    // Also auto-deletes past events (1h grace period)
     useEffect(() => {
-        const id = setInterval(() => setTick((t) => t + 1), TICK_INTERVAL)
+        const cleanup = () => {
+            setTick((t) => t + 1)
+            const now = dayjs()
+            setEvents((prev) => {
+                const expired = prev.filter((e) => now.diff(dayjs(e.event_datetime), 'hour', true) >= 1)
+                const remaining = prev.filter((e) => now.diff(dayjs(e.event_datetime), 'hour', true) < 1)
+                if (expired.length > 0) {
+                    const ids = expired.map((e) => e.id)
+                    supabase.from('events').delete().in('id', ids).then(({ error: delErr }) => {
+                        if (delErr) console.error('Auto-cleanup failed:', delErr.message)
+                    })
+                }
+                return remaining
+            })
+        }
+        const id = setInterval(cleanup, TICK_INTERVAL)
         return () => clearInterval(id)
     }, [])
 
