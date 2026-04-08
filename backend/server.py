@@ -46,9 +46,13 @@ app.add_middleware(
 
 from middleware.auth_middleware import AuthMiddleware
 from auth_router import router as auth_router
+from onboarding_router import router as onboarding_router
+from schedule_router import router as schedule_router
 
 app.add_middleware(AuthMiddleware)
 app.include_router(auth_router)
+app.include_router(onboarding_router)
+app.include_router(schedule_router)
 
 # ==============================
 # GEMINI PROMPTS
@@ -296,4 +300,14 @@ async def process_event_json(request: Request):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    import sys
+    import asyncio
+    
+    # Fix for asyncio.exceptions.CancelledError on shutdown (Windows)
+    if sys.platform == 'win32':
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+        
+    try:
+        uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)
+    except KeyboardInterrupt:
+        pass

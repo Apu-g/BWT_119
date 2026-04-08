@@ -10,8 +10,15 @@ import {
     getNotificationAlert,
     rescheduleEvent,
     identifyReschedulingOpportunities,
+    detectConflicts,
+    generateRescheduleMessage,
+    enrichAndSortWithProfile,
 } from '../lib/priorityEngine'
 import PriorityCard from '../components/PriorityCard'
+import ConflictNotification from '../components/ConflictNotification'
+import CancelModal from '../components/CancelModal'
+import ScheduleChangeLog from '../components/ScheduleChangeLog'
+import { api } from '../lib/api'
 import dayjs from 'dayjs'
 
 // Real-time refresh interval (ms)
@@ -23,6 +30,24 @@ export default function Priority() {
     const [error, setError] = useState(null)
     const [view, setView] = useState('schedule')
     const [tick, setTick] = useState(0)
+
+    // Onboarding profile state
+    const [onboardingProfile, setOnboardingProfile] = useState(null)
+
+    // Conflict & Cancel state
+    const [conflicts, setConflicts] = useState([])
+    const [cancelTarget, setCancelTarget] = useState(null)
+
+    // Fetch onboarding profile
+    useEffect(() => {
+        api.get('/api/onboarding/status')
+            .then((data) => {
+                if (data?.completed && data?.profile) {
+                    setOnboardingProfile(data.profile)
+                }
+            })
+            .catch(() => { /* non-fatal */ })
+    }, [])
 
     const fetchEvents = useCallback(async () => {
         try {
@@ -41,7 +66,17 @@ export default function Priority() {
 
     useEffect(() => { fetchEvents() }, [fetchEvents])
 
-    // Real-time tick: re-render every 60s so priorities/colors/alerts/update live
+    // Detect conflicts whenever events change
+    useEffect(() => {
+        if (events.length > 1) {
+            const detected = detectConflicts(events, 30)
+            setConflicts(detected)
+        } else {
+            setConflicts([])
+        }
+    }, [events, tick])
+
+    // Real-time tick: re-render every 60s so priorities/colors/alerts update live
     // Also auto-archives past events (1h grace period) to drafts table
     useEffect(() => {
         const cleanup = () => {
@@ -61,22 +96,14 @@ export default function Priority() {
                         notes: 'Automatically archived - event expired'
                     }))
 
-                    // First, insert expired events into drafts table
                     supabase.from('drafts').insert(archivedEvents).then(({ error: archiveErr }) => {
                         if (archiveErr) {
                             console.error('Archive to drafts failed:', archiveErr.message)
-                            // Fallback: still delete from events even if archiving fails
-                            const ids = expired.map(e => e.id)
-                            supabase.from('events').delete().in('id', ids).then(({ error: delErr }) => {
-                                if (delErr) console.error('Auto-cleanup failed:', delErr.message)
-                            })
-                        } else {
-                            // Only delete from events table after successful archiving
-                            const ids = expired.map(e => e.id)
-                            supabase.from('events').delete().in('id', ids).then(({ error: delErr }) => {
-                                if (delErr) console.error('Auto-cleanup failed:', delErr.message)
-                            })
                         }
+                        const ids = expired.map(e => e.id)
+                        supabase.from('events').delete().in('id', ids).then(({ error: delErr }) => {
+                            if (delErr) console.error('Auto-cleanup failed:', delErr.message)
+                        })
                     })
                 }
                 return remaining
@@ -86,18 +113,37 @@ export default function Priority() {
         return () => clearInterval(id)
     }, [])
 
-    const handleDeleteEvent = useCallback(async (eventId) => {
+    const handleDeleteConfirm = useCallback(async (eventId, reason) => {
+        const deletedEvent = events.find(e => e.id === eventId)
         setEvents((prev) => prev.filter((e) => e.id !== eventId))
-        const { error: delError } = await supabase.from('events').delete().eq('id', eventId)
-        if (delError) {
-            console.error('Delete failed:', delError.message)
+        
+        try {
+            const { error: delError } = await supabase.from('events').delete().eq('id', eventId)
+            if (delError) throw delError
+
+            // Log cancellation if reason is provided or if just cancelled
+            await api.post('/api/schedule/changes', {
+                event_id: eventId,
+                change_type: 'cancelled',
+                reason: reason || 'Cancelled by user',
+                metadata: { event_title: deletedEvent?.title || 'Unknown', cancellation_reason: reason }
+            }).catch(() => {})
+        } catch (err) {
+            console.error('Delete failed:', err.message)
             fetchEvents()
+        } finally {
+            setCancelTarget(null)
         }
-    }, [fetchEvents])
+    }, [events, fetchEvents])
+
+    const handleDeleteEvent = useCallback((eventId) => {
+        const eventToCancel = events.find(e => e.id === eventId)
+        if (eventToCancel) setCancelTarget(eventToCancel)
+    }, [events])
 
     const handleCompleteEvent = useCallback(async (eventId) => {
         try {
-            // Update the event status to 'completed'
+            const completedEvent = events.find(e => e.id === eventId)
             const { error: updateError } = await supabase
                 .from('events')
                 .update({ status: 'completed' })
@@ -105,18 +151,36 @@ export default function Priority() {
 
             if (updateError) throw updateError
 
-            // Remove the event from the current list
+            // Log the completion
+            try {
+                await api.post('/api/schedule/changes', {
+                    event_id: eventId,
+                    change_type: 'completed',
+                    reason: generateRescheduleMessage(completedEvent || { title: 'Event' }, 'completed'),
+                    metadata: { event_title: completedEvent?.title || 'Unknown' },
+                })
+            } catch (logErr) { /* non-fatal */ }
+
             setEvents(prev => prev.filter(e => e.id !== eventId))
         } catch (error) {
             console.error('Complete event error:', error)
             alert(`Failed to mark event as completed: ${error.message}`)
         }
-    }, [])
+    }, [events])
 
     const handleRescheduleEvent = useCallback(async (eventId, newDateTime) => {
         try {
             const updatedEvent = await rescheduleEvent(eventId, newDateTime, supabase)
             setEvents(prev => prev.map(e => e.id === eventId ? updatedEvent : e))
+            
+            // Log rescheduling
+            api.post('/api/schedule/changes', {
+                event_id: eventId,
+                change_type: 'rescheduled',
+                reason: 'Auto-rescheduled +2 hours to allow completion',
+                metadata: { event_title: updatedEvent?.title || 'Unknown', original_time: newDateTime }
+            }).catch(() => {})
+
             return true
         } catch (error) {
             console.error('Reschedule failed:', error)
@@ -124,11 +188,35 @@ export default function Priority() {
         }
     }, [])
 
+    // Handle conflict resolution from ConflictNotification
+    const handleConflictResolve = useCallback((conflictIndex, action, chosenEventId) => {
+        const conflict = conflicts[conflictIndex]
+        if (!conflict) return
+
+        if (action === 'reschedule' && chosenEventId) {
+            const eventToReschedule = conflict.eventA.id === chosenEventId ? conflict.eventA : conflict.eventB
+            const otherEvent = conflict.eventA.id === chosenEventId ? conflict.eventB : conflict.eventA
+            setRescheduleTarget({ event: eventToReschedule, conflictingEvent: otherEvent })
+        }
+        // 'keep' action — just dismiss (already handled by ConflictNotification)
+    }, [conflicts])
+
+    const handleAutoReschedule = useCallback(async (event) => {
+        // Auto-reschedule to current time + 2 hours (or event time + 2 hours if in future)
+        const eventTime = dayjs(event.event_datetime)
+        const baseTime = eventTime.isAfter(dayjs()) ? eventTime : dayjs()
+        const newDateTime = baseTime.add(2, 'hour').toISOString()
+        
+        await handleRescheduleEvent(event.id, newDateTime)
+    }, [handleRescheduleEvent])
+
     // Identify rescheduling opportunities for events that might conflict with high-priority tasks
     const reschedulingOpportunities = identifyReschedulingOpportunities(events)
 
     // These re-compute every tick because dayjs() inside returns fresh values
-    const enrichedEvents = enrichAndSort(events)
+    const enrichedEvents = onboardingProfile
+        ? enrichAndSortWithProfile(events, onboardingProfile)
+        : enrichAndSort(events)
     const schedule = generateSchedule(events)
 
     // Collect active notification alerts for the banner
@@ -161,6 +249,22 @@ export default function Priority() {
     return (
         <div className="flex-1 overflow-y-auto overflow-x-hidden w-full px-3 sm:px-6 py-5 sm:py-8 max-w-4xl mx-auto animate-fade-in">
 
+            {/* Conflict Notification Toasts (floating) */}
+            <ConflictNotification
+                conflicts={conflicts}
+                onResolve={handleConflictResolve}
+                onDismiss={() => { }}
+            />
+
+            {/* Cancel Modal */}
+            {cancelTarget && (
+                <CancelModal
+                    event={cancelTarget}
+                    onClose={() => setCancelTarget(null)}
+                    onConfirm={handleDeleteConfirm}
+                />
+            )}
+
             {/* Header */}
             <div className="text-center mb-6 sm:mb-10">
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-medium text-nv-accent uppercase tracking-wider mb-4"
@@ -174,6 +278,13 @@ export default function Priority() {
                 <p className="text-nv-text-dim text-sm max-w-md mx-auto mt-3 leading-relaxed">
                     AI-generated schedule with smart recommendations based on urgency and importance.
                 </p>
+                {/* Onboarding profile info */}
+                {onboardingProfile && (
+                    <div className="inline-flex items-center gap-2 mt-3 px-3 py-1.5 rounded-full text-[10px] font-medium"
+                        style={{ background: 'rgba(61, 220, 151, 0.1)', border: '1px solid rgba(61, 220, 151, 0.2)', color: '#3ddc97' }}>
+                        ✨ Personalized for {onboardingProfile.primary_focus} · {onboardingProfile.preferred_slot} peak
+                    </div>
+                )}
             </div>
 
             {/* Notification Alert Banner */}
@@ -216,7 +327,7 @@ export default function Priority() {
                     { label: 'Total Events', value: events.length, icon: '📅', glow: '#4da3ff' },
                     { label: 'Critical', value: enrichedEvents.filter((e) => e.priority_score > 15).length, icon: '🔴', glow: '#ff4d4d' },
                     { label: 'Today', value: events.filter((e) => dayjs(e.event_datetime).isSame(dayjs(), 'day')).length, icon: '📌', glow: '#ff9f43' },
-                    { label: 'Alerts', value: activeAlerts.length, icon: '🔔', glow: activeAlerts.length > 0 ? '#ff4d4d' : '#3ddc97' },
+                    { label: 'Conflicts', value: conflicts.length, icon: '⚠️', glow: conflicts.length > 0 ? '#ff4757' : '#3ddc97' },
                 ].map((stat) => (
                     <div key={stat.label}
                         className="glass rounded-xl p-3 sm:p-4 text-center transition-all duration-200 hover:-translate-y-0.5 cursor-default"
@@ -228,6 +339,9 @@ export default function Priority() {
                     </div>
                 ))}
             </div>
+
+            {/* Schedule Change Log */}
+            <ScheduleChangeLog />
 
             {/* Rescheduling Opportunities Banner */}
             {reschedulingOpportunities.length > 0 && (
@@ -329,7 +443,14 @@ export default function Priority() {
                         </div>
                     ) : (
                         schedule.map((item, i) => (
-                            <PriorityCard key={item.id} item={item} index={i} onDelete={handleDeleteEvent} />
+                            <PriorityCard
+                                key={item.id}
+                                item={item}
+                                index={i}
+                                onDelete={handleDeleteEvent}
+                                onComplete={handleCompleteEvent}
+                                onReschedule={handleAutoReschedule}
+                            />
                         ))
                     )}
                 </div>
@@ -381,6 +502,32 @@ export default function Priority() {
                                                         </span>
                                                     )}
                                                     <div className="flex items-center gap-1.5 ml-auto">
+                                                        {/* Complete button */}
+                                                        <button
+                                                            onClick={() => handleCompleteEvent(event.id)}
+                                                            className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg text-xs font-bold transition-all duration-150 hover:scale-110 flex-shrink-0"
+                                                            style={{
+                                                                background: 'rgba(61, 220, 151, 0.15)',
+                                                                color: '#3ddc97',
+                                                                border: '1px solid rgba(61, 220, 151, 0.3)',
+                                                            }}
+                                                            title="Complete event"
+                                                        >
+                                                            ✓
+                                                        </button>
+                                                        {/* Reschedule button */}
+                                                        <button
+                                                            onClick={() => handleAutoReschedule(event)}
+                                                            className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg text-xs font-bold transition-all duration-150 hover:scale-110 flex-shrink-0"
+                                                            style={{
+                                                                background: 'rgba(255, 159, 67, 0.15)',
+                                                                color: '#ff9f43',
+                                                                border: '1px solid rgba(255, 159, 67, 0.3)',
+                                                            }}
+                                                            title="Auto-reschedule (+2h)"
+                                                        >
+                                                            🔄
+                                                        </button>
                                                         {/* Delete button */}
                                                         <button
                                                             onClick={() => handleDeleteEvent(event.id)}

@@ -1,13 +1,32 @@
 import { getPriorityColor } from '../lib/priorityEngine'
 
-export default function PriorityCard({ item, index, onDelete }) {
+export default function PriorityCard({ item, index, onDelete, onComplete, onReschedule }) {
     const color = getPriorityColor(item.priority)
     const isBreak = item.type === 'break'
     const alert = item.alert
 
+    const getRawId = (id) => id.toString().replace(/^event-/, '')
+
     const handleDelete = (e) => {
         e.stopPropagation()
-        if (onDelete && item.id) onDelete(item.id)
+        if (onDelete && item.id) onDelete(getRawId(item.id))
+    }
+
+    const handleComplete = (e) => {
+        e.stopPropagation()
+        if (onComplete && item.id) onComplete(getRawId(item.id))
+    }
+
+    const handleReschedule = (e) => {
+        e.stopPropagation()
+        if (onReschedule && item.id) {
+            // Pass the raw event data for the auto-reschedule
+            onReschedule({
+                id: getRawId(item.id),
+                title: item.title,
+                event_datetime: item.rawDatetime || item.event_datetime || new Date().toISOString(),
+            })
+        }
     }
 
     return (
@@ -56,7 +75,7 @@ export default function PriorityCard({ item, index, onDelete }) {
                     </div>
                 )}
 
-                {/* Top info row: time + delete + priority badge */}
+                {/* Top info row: time + actions + priority badge */}
                 <div className="flex items-center justify-between mb-2.5 sm:mb-3 pb-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                     {/* Time */}
                     <div className="flex items-center gap-1.5 pl-2">
@@ -65,7 +84,39 @@ export default function PriorityCard({ item, index, onDelete }) {
                         <span className="text-xs sm:text-sm font-medium text-nv-text-dim">{item.endTime}</span>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
+                        {/* Complete button */}
+                        {!isBreak && (
+                            <button
+                                onClick={handleComplete}
+                                className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg text-xs font-bold transition-all duration-150 hover:scale-110"
+                                style={{
+                                    background: 'rgba(61, 220, 151, 0.15)',
+                                    color: '#3ddc97',
+                                    border: '1px solid rgba(61, 220, 151, 0.3)',
+                                }}
+                                title="Complete event"
+                            >
+                                ✓
+                            </button>
+                        )}
+
+                        {/* Reschedule button */}
+                        {!isBreak && (
+                            <button
+                                onClick={handleReschedule}
+                                className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg text-[10px] font-bold transition-all duration-150 hover:scale-110"
+                                style={{
+                                    background: 'rgba(255, 159, 67, 0.15)',
+                                    color: '#ff9f43',
+                                    border: '1px solid rgba(255, 159, 67, 0.3)',
+                                }}
+                                title="Reschedule event"
+                            >
+                                🔄
+                            </button>
+                        )}
+
                         {/* Delete button — red X */}
                         {!isBreak && (
                             <button

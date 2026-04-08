@@ -101,12 +101,37 @@ export function getUrgencyScore(eventDatetime) {
  * - How complex/difficult it is (complexity)
  * - How severe the consequences are (severity)
  */
-export function getPriorityScore(event) {
+export function getPriorityScore(event, onboardingProfile = null) {
     const baseScore = getCategoryWeight(event.category) + getUrgencyScore(event.event_datetime)
     const complexityBonus = getComplexityBonus(event.complexity_score)
     const severityMultiplier = getSeverityMultiplier(event.severity_level)
 
-    return Math.round((baseScore + complexityBonus) * severityMultiplier)
+    let bonus = 0
+    if (onboardingProfile) {
+        // Q1 boost: if event category matches primary_focus
+        const focusMap = { exams: 'exam', projects: 'hackathon', work: 'meeting', personal: 'personal' }
+        if (focusMap[onboardingProfile.primary_focus] === (event.category || '').toLowerCase()) {
+            bonus += (onboardingProfile.priority_boost || 0) * 10
+        }
+
+        // Q2 motivation boost
+        const motiveMap = { study: ['exam', 'assignment'], build: ['hackathon'], exercise: ['personal'], chill: ['reminder'] }
+        const motiveCategories = motiveMap[onboardingProfile.motivation_type] || []
+        if (motiveCategories.includes((event.category || '').toLowerCase())) {
+            bonus += (onboardingProfile.motivation_weight || 0) * 10
+        }
+
+        // Q3 slot boost: if event falls in preferred_slot
+        if (event.event_datetime && onboardingProfile.preferred_slot) {
+            const hour = dayjs(event.event_datetime).hour()
+            const eventSlot = hour >= 5 && hour < 12 ? 'morning' : hour >= 12 && hour < 17 ? 'afternoon' : hour >= 17 && hour < 21 ? 'evening' : 'night'
+            if (eventSlot === onboardingProfile.preferred_slot) {
+                bonus += (onboardingProfile.slot_weight || 0.5) * 3
+            }
+        }
+    }
+
+    return Math.round((baseScore + complexityBonus + bonus) * severityMultiplier)
 }
 
 /**
@@ -617,4 +642,85 @@ export function identifyReschedulingOpportunities(events) {
     }
 
     return opportunities
+}
+
+// ============================================================
+// CONFLICT DETECTION ENGINE
+// ============================================================
+
+/**
+ * Detect schedule conflicts: events overlapping within 30 minutes.
+ * Returns array of { eventA, eventB, overlapMinutes }.
+ */
+export function detectConflicts(events, thresholdMinutes = 30) {
+    const now = dayjs()
+    const futureEvents = events
+        .filter((e) => dayjs(e.event_datetime).isAfter(now))
+        .sort((a, b) => dayjs(a.event_datetime).valueOf() - dayjs(b.event_datetime).valueOf())
+
+    const conflicts = []
+    for (let i = 0; i < futureEvents.length; i++) {
+        for (let j = i + 1; j < futureEvents.length; j++) {
+            const timeA = dayjs(futureEvents[i].event_datetime)
+            const timeB = dayjs(futureEvents[j].event_datetime)
+            const diffMinutes = Math.abs(timeB.diff(timeA, 'minute'))
+
+            if (diffMinutes <= thresholdMinutes) {
+                conflicts.push({
+                    eventA: futureEvents[i],
+                    eventB: futureEvents[j],
+                    overlapMinutes: thresholdMinutes - diffMinutes,
+                })
+            }
+        }
+    }
+    return conflicts
+}
+
+/**
+ * Generate a human-readable explanation for a schedule change.
+ */
+export function generateRescheduleMessage(event, changeType, conflictingEvent = null) {
+    const title = event.title || 'Untitled Event'
+    const messages = {
+        conflict_resolved: conflictingEvent
+            ? `"${title}" was moved because it conflicted with "${conflictingEvent.title}". The higher-priority event kept its slot.`
+            : `"${title}" was moved to resolve a time conflict.`,
+        rescheduled: `"${title}" was rescheduled to a better time slot based on your preferences.`,
+        auto_moved: `"${title}" was automatically moved by Chrona's AI to optimize your schedule.`,
+        user_moved: `"${title}" was manually rescheduled by you.`,
+        completed: `"${title}" was marked as completed.`,
+        skipped: `"${title}" was skipped and may be rescheduled later.`,
+    }
+    return messages[changeType] || `"${title}" was modified.`
+}
+
+/**
+ * Apply onboarding profile boosts to a list of events.
+ * Returns enriched + sorted events with boosted scores.
+ */
+export function enrichAndSortWithProfile(events, onboardingProfile = null) {
+    return [...events]
+        .map((event) => {
+            const score = getPriorityScore(event, onboardingProfile)
+            const color = getPriorityColor(score)
+            const severityColor = getSeverityColor(event.severity_level)
+            const { action, recommendation, studyHours, icon } = generateAction(event)
+            const alert = getNotificationAlert(event)
+            return {
+                ...event,
+                priority_score: score,
+                color,
+                severityColor,
+                action,
+                recommendation,
+                studyHours,
+                actionIcon: icon,
+                alert,
+            }
+        })
+        .sort((a, b) => {
+            if (b.priority_score !== a.priority_score) return b.priority_score - a.priority_score
+            return dayjs(a.event_datetime).valueOf() - dayjs(b.event_datetime).valueOf()
+        })
 }

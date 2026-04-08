@@ -20,7 +20,14 @@ export default function Upload() {
         setStatus(null)
 
         try {
-            const data = await api.post('/api/process-event', { text: text.trim() })
+            if (file) {
+                const formData = new FormData()
+                formData.append('file', file)
+                if (text.trim()) formData.append('text', text.trim())
+                await api.postFormData('/api/process-event', formData)
+            } else {
+                await api.post('/api/process-event-json', { text: text.trim() })
+            }
             setStatus({ type: 'success', message: 'Event processed successfully ✨' })
             setText('')
             setFile(null)

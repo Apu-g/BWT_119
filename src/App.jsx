@@ -1,10 +1,13 @@
-import { Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom'
+import { Routes, Route, NavLink, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import Upload from './pages/Upload'
 import Mindmap from './pages/Mindmap'
 import Priority from './pages/Priority'
 import Drafts from './pages/Drafts'
 import Auth from './pages/Auth'
+import OnboardingWizard from './components/OnboardingWizard'
 import OpeningAnimation from './components/OpeningAnimation'
+import { api } from './lib/api'
 
 const navLinks = [
     { to: '/', label: 'Upload', icon: '⬆️' },
@@ -24,19 +27,76 @@ function ProtectedRoute({ children }) {
     return children
 }
 
+function OnboardingGuard({ children }) {
+    const [checking, setChecking] = useState(true)
+    const [needsOnboarding, setNeedsOnboarding] = useState(false)
+    const navigate = useNavigate()
+
+    useEffect(() => {
+        if (!isAuthenticated()) {
+            setChecking(false)
+            return
+        }
+
+        // Quick localStorage check first
+        if (localStorage.getItem('chrona_onboarded') === 'true') {
+            setChecking(false)
+            return
+        }
+
+        // Check server
+        api.get('/api/onboarding/status')
+            .then((data) => {
+                if (data?.completed) {
+                    localStorage.setItem('chrona_onboarded', 'true')
+                    setNeedsOnboarding(false)
+                } else {
+                    setNeedsOnboarding(true)
+                }
+            })
+            .catch(() => {
+                // If API fails, don't block the user
+                setNeedsOnboarding(false)
+            })
+            .finally(() => setChecking(false))
+    }, [])
+
+    if (checking) {
+        return (
+            <div className="flex-1 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full border-2 border-nv-accent/30 border-t-nv-accent animate-spin" />
+            </div>
+        )
+    }
+
+    if (needsOnboarding) {
+        return <Navigate to="/onboarding" replace />
+    }
+
+    return children
+}
+
 function handleLogout() {
     localStorage.removeItem('chrona_token')
     localStorage.removeItem('chrona_user_id')
+    localStorage.removeItem('chrona_onboarded')
     window.location.href = '/auth'
 }
 
 export default function App() {
     const location = useLocation()
     const onAuthPage = location.pathname === '/auth'
+    const onOnboardingPage = location.pathname === '/onboarding'
 
     // If on auth page, render ONLY the auth page (no nav shell)
     if (onAuthPage) {
         return <Auth />
+    }
+
+    // If on onboarding page, render ONLY onboarding (no nav shell)
+    if (onOnboardingPage) {
+        if (!isAuthenticated()) return <Navigate to="/auth" replace />
+        return <OnboardingWizard />
     }
 
     return (
@@ -107,10 +167,10 @@ export default function App() {
             {/* ── Routes ─────────────────────────────────── */}
             <main className="flex-1 flex flex-col overflow-x-hidden min-h-0">
                 <Routes>
-                    <Route path="/" element={<ProtectedRoute><Upload /></ProtectedRoute>} />
-                    <Route path="/mindmap" element={<ProtectedRoute><Mindmap /></ProtectedRoute>} />
-                    <Route path="/priority" element={<ProtectedRoute><Priority /></ProtectedRoute>} />
-                    <Route path="/drafts" element={<ProtectedRoute><Drafts /></ProtectedRoute>} />
+                    <Route path="/" element={<ProtectedRoute><OnboardingGuard><Upload /></OnboardingGuard></ProtectedRoute>} />
+                    <Route path="/mindmap" element={<ProtectedRoute><OnboardingGuard><Mindmap /></OnboardingGuard></ProtectedRoute>} />
+                    <Route path="/priority" element={<ProtectedRoute><OnboardingGuard><Priority /></OnboardingGuard></ProtectedRoute>} />
+                    <Route path="/drafts" element={<ProtectedRoute><OnboardingGuard><Drafts /></OnboardingGuard></ProtectedRoute>} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
             </main>
