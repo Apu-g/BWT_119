@@ -42,9 +42,11 @@ export default function Auth() {
                 const data = await res.json()
                 if (!res.ok) throw new Error(data.detail || 'Signup failed')
 
-                setSuccess('Account created! You can now sign in.')
-                setIsLogin(true)
-                setPassword('')
+                // Auto-login after signup
+                localStorage.setItem('chrona_token', data.access_token)
+                localStorage.setItem('chrona_user_id', data.user_id)
+                localStorage.setItem('chrona_username', data.username || username)
+                navigate('/')
             }
         } catch (err) {
             setError(err.message)

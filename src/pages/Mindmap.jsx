@@ -13,7 +13,7 @@ import {
 // Real-time refresh interval (ms)
 const TICK_INTERVAL = 60_000
 import '@xyflow/react/dist/style.css'
-import { supabase } from '../lib/supabase'
+import { supabase, getCurrentUserId } from '../lib/supabase'
 import {
     getPriorityScore,
     getPriorityColor,
@@ -294,7 +294,10 @@ export default function Mindmap() {
     }, [])
 
     const fetchEvents = useCallback(async () => {
-        const { data, error: e } = await supabase.from('events').select('*').order('event_datetime', { ascending: true })
+        const userId = getCurrentUserId()
+        let query = supabase.from('events').select('*').order('event_datetime', { ascending: true })
+        if (userId) query = query.eq('user_id', userId)
+        const { data, error: e } = await query
         if (e) setError(e.message)
         else setEvents(data || [])
         setLoading(false)

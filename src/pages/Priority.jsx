@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, getCurrentUserId } from '../lib/supabase'
 import {
     sortByPriority,
     getPriorityScore,
@@ -26,7 +26,10 @@ export default function Priority() {
 
     const fetchEvents = useCallback(async () => {
         try {
-            const { data, error: fetchError } = await supabase.from('events').select('*')
+            const userId = getCurrentUserId()
+            let query = supabase.from('events').select('*')
+            if (userId) query = query.eq('user_id', userId)
+            const { data, error: fetchError } = await query
             if (fetchError) throw fetchError
             setEvents(data || [])
         } catch (err) {

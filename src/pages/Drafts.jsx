@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, getCurrentUserId } from '../lib/supabase'
 import { enrichAndSort, generateAction, getPriorityColor, getSeverityColor } from '../lib/priorityEngine'
 import dayjs from 'dayjs'
 
@@ -11,7 +11,10 @@ export default function Drafts() {
 
     const fetchDrafts = useCallback(async () => {
         try {
-            const { data, error: fetchError } = await supabase.from('drafts').select('*').order('archived_at', { ascending: false })
+            const userId = getCurrentUserId()
+            let query = supabase.from('drafts').select('*').order('archived_at', { ascending: false })
+            if (userId) query = query.eq('user_id', userId)
+            const { data, error: fetchError } = await query
             if (fetchError) throw fetchError
             setDrafts(data || [])
         } catch (err) {
@@ -35,6 +38,7 @@ export default function Drafts() {
             if (fetchError) throw fetchError
 
             // Insert back into events table
+            const userId = getCurrentUserId()
             const { error: insertError } = await supabase
                 .from('events')
                 .insert([{
@@ -45,7 +49,8 @@ export default function Drafts() {
                     severity_level: draftData.severity_level,
                     complexity_score: draftData.complexity_score,
                     estimated_prep_hours: draftData.estimated_prep_hours,
-                    status: 'pending'
+                    status: 'pending',
+                    user_id: userId,
                 }])
 
             if (insertError) throw insertError
